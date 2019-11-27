@@ -1,11 +1,12 @@
 from select import select
 from scapy.all import conf, ETH_P_ALL, MTU, plist
+import datetime
 
 # Stop sniff() asynchronously
 # Source: https://github.com/secdev/scapy/issues/989#issuecomment-380044430
 
 def sniff(store=False, prn=None, lfilter=None,
-          stop_event=None, refresh=.1, *args, **kwargs):
+          stop_event=None, hb=None, refresh=.1, *args, **kwargs):
     """Sniff packets
 sniff([count=0,] [prn=None,] [store=1,] [offline=None,] [lfilter=None,] + L2ListenSocket args)
 
@@ -22,9 +23,14 @@ refresh: check stop_event.set() every refresh seconds
     s = conf.L2listen(type=ETH_P_ALL, *args, **kwargs)
     lst = []
     try:
+        start = datetime.datetime.now()
         while True:
             if stop_event and stop_event.is_set():
                 break
+            now = datetime.datetime.now()
+            if (now - start).seconds > 1:
+                start = now
+                hb()
             sel = select([s], [], [], refresh)
             if s in sel[0]:
                 p = s.recv(MTU)
