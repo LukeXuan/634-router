@@ -49,7 +49,7 @@ class OSPFLink(Packet):
 class OSPFLSU(Packet):
     name = "OSPFLSU"
     fields_desc = [ ShortField("seq", 0),
-                    ShortField("ttl", 1),
+                    ShortField("ttl", 3),
                     FieldLenField("num", None, count_of="linklists"),
                     PacketListField("linklists", None, OSPFLink,
                                     length_from=lambda pkt:pkt.num * 12)

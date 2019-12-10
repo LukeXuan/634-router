@@ -28,8 +28,8 @@ class PWOSPF:
     def __init__(self, ifaces, sw):
         self.ifaces = {}
         self.sw = sw
-        self.id = str(IPv4Network(ifaces[2]['subnet']).ip)
-        self.edges = set()
+        self.id = ifaces[2]['ipaddr']
+        self.edges = {}
         self.root = {}
         self.dist = {}
         self.port_for_router = {}
@@ -47,10 +47,11 @@ class PWOSPF:
             }
 
             self.subnets.add(IPv4Network(iface['subnet']))
-            ip = IPv4Network(iface['subnet']).ip
+            ip = IPv4Address(iface['ipaddr'])
+            subnet_ip = IPv4Network(iface['subnet']).ip
             prefixlen = self.ifaces[port]['subnet'].prefixlen
             self.sw.insertTableEntry(table_name='MyIngress.next_hop_ip_table',
-                                     match_fields={'hdr.ip.dstAddr': [str(ip), prefixlen]},
+                                     match_fields={'hdr.ip.dstAddr': [str(subnet_ip), prefixlen]},
                                      action_name='MyIngress.ipv4_direct')
 
             self.sw.insertTableEntry(table_name='MyIngress.mac_lookup_table',
@@ -85,7 +86,7 @@ class PWOSPF:
                 OSPFHello(mask=str(self[port]['subnet'].netmask), helloint=self[port]['helloint']))
 
     def link_state_packet(self, port, router):
-        ipaddr = str(self.ifaces[port]['ipaddr'])
+        ipaddr = str(self.ifaces[port]['subnet'].ip)
         mask = str(self.ifaces[port]['subnet'].netmask)
         if router is None:
             router = "0.0.0.0"
@@ -95,6 +96,7 @@ class PWOSPF:
         link_states = []
         included_ports = set()
         for router, port in self.port_for_router.items():
+            print("%s: router %s for port %d" % (self.id, router, port))
             included_ports.add(port)
             link_states.append(self.link_state_packet(port, router))
         for port in self.ifaces:
@@ -134,7 +136,7 @@ class PWOSPF:
                 if subnet not in self.next_hop_for_subnet or root != self.next_hop_for_subnet[subnet]:
                     ip = subnet.ip
                     prefixlen = subnet.prefixlen
-                    print("%s: updating entry for %s/%d" % (self.id, ip, prefixlen))
+                    print("%s: updating entry for %s/%d with next hop %s" % (self.id, ip, prefixlen, root))
                     if subnet in self.next_hop_for_subnet:
                         self.sw.deleteTableEntry(table_name='MyIngress.next_hop_ip_table',
                                                  match_fields={'hdr.ip.dstAddr': [str(ip), prefixlen]},
@@ -160,14 +162,14 @@ class PWOSPF:
             router = working_set.pop()
             root = self.root[router]
             dist = self.dist[router]
-            for edge in self.edges:
-                if edge[0] == router:
-                    edge = (edge[1], router)
-                if edge[0] == router and edge[1] not in visited_set:
-                    visited_set.add(edge[1])
-                    working_set.add(edge[1])
-                    self.root[edge[1]] = root
-                    self.dist[edge[1]] = self.dist[dist]
+            if router not in self.edges:
+                continue
+            for r in self.edges[router]:
+                if r not in visited_set:
+                    visited_set.add(r)
+                    working_set.add(r)
+                    self.root[r] = root
+                    self.dist[r] = dist + 1
 
     def update_adj(self, router, port, send):
         if (router not in self.port_for_router):
@@ -184,6 +186,7 @@ class PWOSPF:
         else:
             self.seq_for_router[router] = pkt[OSPFLSU].seq
         link_states = pkt[OSPFLSU].linklists
+        self.edges[router] = set()
         for link_state in link_states:
             subnet = IPv4Network("%s/%s" % (link_state.subnet, link_state.mask))
             if subnet not in self.routers_for_subnet:
@@ -191,6 +194,8 @@ class PWOSPF:
 
             # print("router %s is linked to %s" % (router, subnet))
             self.routers_for_subnet[subnet].add(router)
+            if link_state.routerID != "0.0.0.0":
+                self.edges[router].add(link_state.routerID)
         self.update_root_and_dist()
         self.update_forward_map()
 
@@ -341,7 +346,7 @@ class RouterController(Thread):
             port = self.pwospf.port_for_ip(pkt[IP].dst)
             if port != None and pkt[IP].dst == str(self.pwospf[port]['ipaddr']):
                 return True
-            print(port, pkt[IP].dst)
+            print("%s: received improper packet %s" % (self.pwospf.id, pkt[IP].dst))
         return False
 
     def handlePkt(self, pkt):

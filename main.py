@@ -11,7 +11,7 @@ net = P4Mininet(program='router.p4', topo=topo, auto_arp=False)
 net.start()
 
 # Add a mcast group for all ports (except for the CPU port)
-sw1, sw2 = net.get('s1'), net.get('s2')
+sw1, sw2, sw3 = net.get('s1'), net.get('s2'), net.get('s3')
 
 # Send MAC bcast packets to the bcast multicast group
 cpu1 = Router(sw1, {
@@ -44,18 +44,33 @@ cpu2 = Router(sw2, {
         'helloint': 1
     },
     4: {
-        'subnet': "20.0.0.0/24",
-        'ipaddr': '20.0.0.2',
+        'subnet': "30.0.0.0/24",
+        'ipaddr': '30.0.0.1',
         'helloint': 1
     }
 })
 cpu2.start()
 
+cpu3 = Router(sw3, {
+    2: {
+        'subnet': "20.0.0.0/24",
+        'ipaddr': '20.0.0.2',
+        'helloint': 1
+    },
+    3: {
+        'subnet': "30.0.0.0/24",
+        'ipaddr': '30.0.0.2',
+        'helloint': 1
+    }
+})
+
+cpu3.start()
+
 h2, h3 = net.get('h1_2'), net.get('h1_3')
 
 # print h2.cmd('arping -c1 -w10 10.0.3.1')
-print h3.cmd('ping -c1 10.0.2.1')
-print h2.cmd('ping -c1 10.0.103.1')
+# print(h3.cmd('ping -c1 10.0.2.1'))
+print(h2.cmd('ping -c1 10.0.103.1'))
 
 
 # These table entries were added by the CPU:

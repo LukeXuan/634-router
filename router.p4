@@ -14,7 +14,7 @@ const bit<16> ARP_OP_REQ        = 0x0001;
 const bit<16> ARP_OP_REPLY      = 0x0002;
 
 const bit<16> TYPE_ARP          = 0x0806;
-const bit<16> TYPE_CPU_METADATA = 0x080a;
+const bit<16> TYPE_CPU_METADATA = 0x081a;
 const bit<16> TYPE_IP           = 0x0800;
 
 const reason_t REASON_NO        = 0x0;
