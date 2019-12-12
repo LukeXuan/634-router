@@ -28,7 +28,7 @@ class PWOSPF:
     def __init__(self, ifaces, sw):
         self.ifaces = {}
         self.sw = sw
-        self.id = ifaces[2]['ipaddr']
+        self.id = ifaces["2"]['ipaddr']
         self.edges = {}
         self.root = {}
         self.dist = {}
@@ -40,6 +40,7 @@ class PWOSPF:
         self.seq_for_router = {}
         self.subnets = set()
         for port, iface in ifaces.items():
+            port = int(port)
             self.ifaces[port] = {
                 'ipaddr': IPv4Address(iface['ipaddr']),
                 'subnet': IPv4Network(iface['subnet']),
