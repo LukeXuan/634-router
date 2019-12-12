@@ -20,14 +20,14 @@ class OSPF(Packet):
                     ShortField("autype", 0),
                     LongField("authentication", 0)
     ]
-    # def post_build(self, p, pay):
-    #     if self.length == None:
-    #         ck = len(p + pay)
-    #         p = p[:2] + chb(ck >> 8) + chb(ck & 0xff) + p[4:]
-    #     if self.checksum == None:
-    #         ck  = checksum(p + pay)
-    #         p = p[:12] + chb(ck >> 8) + chb(ck & 0xff) + p[14:]
-    #     return p + pay
+    def post_build(self, p, pay):
+        if self.length == None:
+            ck = len(p + pay)
+            p = p[:2] + chb(ck >> 8) + chb(ck & 0xff) + p[4:]
+        if self.checksum == None:
+            ck  = checksum(p + pay)
+            p = p[:12] + chb(ck >> 8) + chb(ck & 0xff) + p[14:]
+        return p + pay
 
 class OSPFHello(Packet):
     name = "OSPFHello"
@@ -49,7 +49,7 @@ class OSPFLink(Packet):
 class OSPFLSU(Packet):
     name = "OSPFLSU"
     fields_desc = [ ShortField("seq", 0),
-                    ShortField("ttl", 3),
+                    ShortField("ttl", 2),
                     FieldLenField("num", None, count_of="linklists"),
                     PacketListField("linklists", None, OSPFLink,
                                     length_from=lambda pkt:pkt.num * 12)

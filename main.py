@@ -68,10 +68,13 @@ cpu3.start()
 
 h2, h3 = net.get('h1_2'), net.get('h1_3')
 
+time.sleep(10)
+
+print("test start")
 # print h2.cmd('arping -c1 -w10 10.0.3.1')
 # print(h3.cmd('ping -c1 10.0.2.1'))
 print(h2.cmd('ping -c1 10.0.103.1'))
-
+print(h2.cmd('ping -c1 10.0.103.1'))
 
 # These table entries were added by the CPU:
 while True:

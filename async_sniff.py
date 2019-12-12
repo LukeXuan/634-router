@@ -27,10 +27,6 @@ refresh: check stop_event.set() every refresh seconds
         while True:
             if stop_event and stop_event.is_set():
                 break
-            now = datetime.datetime.now()
-            if (now - start).seconds > 1:
-                start = now
-                hb()
             sel = select([s], [], [], refresh)
             if s in sel[0]:
                 p = s.recv(MTU)
@@ -44,6 +40,10 @@ refresh: check stop_event.set() every refresh seconds
                     r = prn(p)
                     if r is not None:
                         print(r)
+            now = datetime.datetime.now()
+            if (now - start).seconds > 1:
+                start = now
+                hb()
     except KeyboardInterrupt:
         pass
     finally:

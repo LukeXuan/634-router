@@ -97,7 +97,6 @@ class PWOSPF:
         link_states = []
         included_ports = set()
         for router, port in self.port_for_router.items():
-            print("%s: router %s for port %d" % (self.id, router, port))
             included_ports.add(port)
             link_states.append(self.link_state_packet(port, router))
         for port in self.ifaces:
@@ -210,8 +209,8 @@ class RouterController(Thread):
         self.port_for_mac = {}
         self.stop_event = Event()
 
-        self.missing_ip_packets = []
-        self.missinng_mac_packets = []
+        self.missing_ip_packets = set()
+        self.missing_mac_packets = set()
         self.monitor = {}
         self.counter = 0
 
@@ -234,7 +233,6 @@ class RouterController(Thread):
     def addMacAddr(self, ip, mac, port):
         if ip in self.mac_for_ip: return
 
-        print("%s: inserting %s into MAC Table" % (self.pwospf.id, ip))
         self.sw.insertTableEntry(table_name='MyIngress.mac_lookup_table',
                 match_fields={'meta.next_hop_ip': [ip]},
                 action_name='MyIngress.mac_forward',
@@ -242,10 +240,11 @@ class RouterController(Thread):
         self.mac_for_ip[ip] = mac
 
 
-        for idx, pkt in enumerate(self.missinng_mac_packets):
+        for pkt in set(self.missing_mac_packets):
             if pkt[CPUMetadata].nextHopIP == ip:
+                print("%s: one packet from (%s) missing next hop (%s) Mac sent" % (self.pwospf.id, pkt[IP].src, pkt[CPUMetadata].nextHopIP))
                 self.send(pkt)
-                del self.missinng_mac_packets[idx]
+                self.missing_mac_packets.remove(pkt)
 
     def addPort(self, mac, port):
         if mac in self.port_for_mac: return
@@ -299,12 +298,13 @@ class RouterController(Thread):
                 self.send(pkt)
 
     def checkMissingIPPackets(self):
-        for idx, pkt in enumerate(self.missing_ip_packets):
+        for pkt in set(self.missing_ip_packets):
             ip = IPv4Address(pkt[IP].dst)
             for subnet in self.pwospf.next_hop_for_subnet:
                 if ip in subnet:
-                    del self.missing_ip_packets[idx]
+                    print("%s: one packet missing next hop IP sent" % self.pwospf.id)
                     self.send(pkt)
+                    self.missing_ip_packets.remove(pkt)
 
     def heartbeat(self):
         for port in self.pwospf.ifaces:
@@ -320,12 +320,12 @@ class RouterController(Thread):
         self.pwospf.lsuint += 1
 
     def handleMissingMacPacket(self, pkt):
-        self.missinng_mac_packets.append(pkt)
+        self.missing_mac_packets.add(pkt)
         # issue ARP request for the IP
         next_hop_ip = pkt[CPUMetadata].nextHopIP
         next_hop_port = self.pwospf.port_for_ip(next_hop_ip)
 
-        print("%s: sending ARP packet for %s at port %d" % (self.pwospf.id, next_hop_ip, next_hop_port))
+        print("%s: one packet from (%s) missing next hop (%s) Mac received" % (self.pwospf.id, pkt[IP].src, next_hop_ip))
 
         packet = (
                 Ether(dst=ETHER_BROADCAST)/
@@ -338,7 +338,8 @@ class RouterController(Thread):
         self.send(packet)
 
     def handleMissingIPPacket(self, pkt):
-        self.missing_ip_packets.append(pkt)
+        print("%s: one packet missing next hop IP received" % self.pwospf.id)
+        self.missing_ip_packets.add(pkt)
 
     def proper_pkt(self, pkt):
         if CPUMetadata in pkt:
