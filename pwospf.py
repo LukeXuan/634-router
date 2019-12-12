@@ -57,6 +57,6 @@ class OSPFLSU(Packet):
     def extract_padding(self, s):
         return '', s
 
-bind_layers(IP, OSPF, proto=TYPE_OSPF)
+# bind_layers(IP, OSPF, proto=TYPE_OSPF)
 bind_layers(OSPF, OSPFHello, type=TYPE_HELLO)
 bind_layers(OSPF, OSPFLSU, type=TYPE_LSU)

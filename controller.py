@@ -1,6 +1,6 @@
 from threading import Thread, Event, Timer
 from scapy.all import sendp
-from scapy.all import Packet, Ether, IP, ARP
+from scapy.all import Packet, Ether, IP, ARP, Raw
 from async_sniff import sniff
 from cpu_metadata import CPUMetadata
 from pwospf import *
@@ -21,6 +21,7 @@ REASON_MAC_FAIL  = 0x4
 REASON_PORT_FAIL = 0x5
 REASON_UNKNOWN   = 0xff
 
+TYPE_OSPF = 89
 ETHER_BROADCAST = "ff:ff:ff:ff:ff:ff"
 OSPF_BROADCAST = "224.0.0.5"
 
@@ -82,7 +83,7 @@ class PWOSPF:
     def hello_packet(self, port):
         return (Ether(dst=ETHER_BROADCAST)/
                 CPUMetadata(origEtherType=ETHER_IP)/
-                IP(src=str(self[port]['ipaddr']), dst=OSPF_BROADCAST)/
+                IP(src=str(self[port]['ipaddr']), dst=OSPF_BROADCAST, proto=TYPE_OSPF)/
                 OSPF(routerID=self.id, areaID=config.areaID)/
                 OSPFHello(mask=str(self[port]['subnet'].netmask), helloint=self[port]['helloint']))
 
@@ -105,7 +106,7 @@ class PWOSPF:
 
         packet = (Ether(dst=ETHER_BROADCAST)/
                   CPUMetadata(origEtherType=ETHER_IP)/
-                  IP(src=self.id, dst=OSPF_BROADCAST)/
+                  IP(src=self.id, dst=OSPF_BROADCAST, proto=TYPE_OSPF)/
                   OSPF(routerID=self.id, areaID=config.areaID)/
                   OSPFLSU(seq=self.seq, linklists=link_states))
         send(packet)
@@ -281,6 +282,9 @@ class RouterController(Thread):
             self.send(packet)
 
     def handleOSPFPacket(self, pkt):
+        ospf_layer = OSPF(pkt[Raw])
+        pkt[IP].remove_payload()
+        pkt = pkt/ospf_layer
         if OSPFHello in pkt:
             port = pkt[CPUMetadata].srcPort
             if (self.pwospf.in_subnet(port, pkt[IP].src) and
