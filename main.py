@@ -15,52 +15,52 @@ sw1, sw2, sw3 = net.get('s1'), net.get('s2'), net.get('s3')
 
 # Send MAC bcast packets to the bcast multicast group
 cpu1 = Router(sw1, {
-    2: {
+    "2": {
         'subnet': "10.0.2.0/24",
         'ipaddr': '10.0.2.0',
-        'helloint': 1
+        'helloint': 5
     },
     3: {
         'subnet': "10.0.3.0/24",
         'ipaddr': '10.0.3.0',
-        'helloint': 1
+        'helloint': 5
     },
     4: {
         'subnet': "20.0.0.0/24",
         'ipaddr': '20.0.0.1',
-        'helloint': 1
+        'helloint': 5
     }
 })
 cpu1.start()
 cpu2 = Router(sw2, {
-    2: {
+    "2": {
         'subnet': "10.0.102.0/24",
         'ipaddr': '10.0.102.0',
-        'helloint': 1
+        'helloint': 5
     },
     3: {
         'subnet': "10.0.103.0/24",
         'ipaddr': '10.0.103.0',
-        'helloint': 1
+        'helloint': 5
     },
     4: {
         'subnet': "30.0.0.0/24",
         'ipaddr': '30.0.0.1',
-        'helloint': 1
+        'helloint': 5
     }
 })
 cpu2.start()
 
 cpu3 = Router(sw3, {
-    2: {
+    "2": {
         'subnet': "20.0.0.0/24",
         'ipaddr': '20.0.0.2',
-        'helloint': 1
+        'helloint': 5
     },
     3: {
         'subnet': "30.0.0.0/24",
         'ipaddr': '30.0.0.2',
-        'helloint': 1
+        'helloint': 5
     }
 })
 
@@ -68,7 +68,7 @@ cpu3.start()
 
 h2, h3 = net.get('h1_2'), net.get('h1_3')
 
-time.sleep(10)
+time.sleep(12)
 
 print("test start")
 # print h2.cmd('arping -c1 -w10 10.0.3.1')

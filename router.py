@@ -30,7 +30,7 @@ class Router(P4RuntimeSwitch):
         kwargs.update({
             'enable_grpc': enable_grpc,
             'cli_path': 'simple_switch_CLI',
-            'sw_pathn': sw_path,
+            'sw_path': sw_path,
             'program': prog,
             'start_controller': True,
         })
