@@ -315,7 +315,7 @@ class RouterController(Thread):
                 self.pwospf.remove_adj(routerID, port, self.send)
 
         self.counter += 1
-        if self.pwospf.lsuint % self.LSUINT:
+        if self.pwospf.lsuint % self.LSUINT == 0:
             self.pwospf.broadcast_link_state(self.send)
         self.pwospf.lsuint += 1
 
