@@ -231,10 +231,12 @@ class RouterController(Thread):
                              action_name='NoAction')
 
         self.pwospf = PWOSPF(ifaces, sw)
-        self.LSUINT = 30
+        self.LSUINT = 5
 
     def addMacAddr(self, ip, mac, port):
         if ip in self.mac_for_ip: return
+
+        print ("%s: updating entry for %s with MAC %s and port %d" % (self.pwospf.id, ip, mac, port))
 
         self.sw.insertTableEntry(table_name='MyIngress.mac_lookup_table',
                 match_fields={'meta.next_hop_ip': [ip]},
@@ -311,6 +313,11 @@ class RouterController(Thread):
                     print("%s: one packet missing next hop IP sent" % self.pwospf.id)
                     self.send(pkt)
                     self.missing_ip_packets.remove(pkt)
+
+    def hb_loop(self):
+        while not (self.stop_event and self.stop_event.is_set()):
+            self.heartbeat()
+            time.sleep(1)
 
     def heartbeat(self):
         for port in self.pwospf.ifaces:
@@ -399,6 +406,7 @@ class RouterController(Thread):
         sendp(*args, **kwargs)
 
     def run(self):
+        Thread(target=self.hb_loop).start()
         sniff(iface=self.iface, prn=self.handlePkt, stop_event=self.stop_event, hb=self.heartbeat)
 
     def start(self, *args, **kwargs):

@@ -23,7 +23,6 @@ refresh: check stop_event.set() every refresh seconds
     s = conf.L2listen(type=ETH_P_ALL, *args, **kwargs)
     lst = []
     try:
-        start = datetime.datetime.now()
         while True:
             if stop_event and stop_event.is_set():
                 break
@@ -40,10 +39,6 @@ refresh: check stop_event.set() every refresh seconds
                     r = prn(p)
                     if r is not None:
                         print(r)
-            now = datetime.datetime.now()
-            if (now - start).seconds > 1:
-                start = now
-                hb()
     except KeyboardInterrupt:
         pass
     finally:
