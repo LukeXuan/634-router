@@ -303,6 +303,7 @@ class RouterController(Thread):
             self.checkMissingIPPackets()
             if pkt[OSPFLSU].ttl > 0:
                 pkt[OSPFLSU].ttl -= 1
+                pkt[IP].dst = OSPF_BROADCAST
                 self.send(pkt)
 
     def checkMissingIPPackets(self):
