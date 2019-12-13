@@ -36,6 +36,7 @@ class PWOSPF:
         self.port_for_router = {}
         self.routers_for_subnet = {}
         self.next_hop_for_subnet = {}
+        self.ip_for_neighbors = {}
         self.lsuint = 0
         self.seq = 0
         self.seq_for_router = {}
@@ -137,7 +138,7 @@ class PWOSPF:
                 if subnet not in self.next_hop_for_subnet or root != self.next_hop_for_subnet[subnet]:
                     ip = subnet.ip
                     prefixlen = subnet.prefixlen
-                    print("%s: updating entry for %s/%d with next hop %s" % (self.id, ip, prefixlen, root))
+                    print("%s: updating entry for %s/%d with next hop %s (interface ip %s)" % (self.id, ip, prefixlen, root, self.ip_for_neighbors[root]))
                     if subnet in self.next_hop_for_subnet:
                         self.sw.deleteTableEntry(table_name='MyIngress.next_hop_ip_table',
                                                  match_fields={'hdr.ip.dstAddr': [str(ip), prefixlen]},
@@ -145,7 +146,7 @@ class PWOSPF:
                     self.sw.insertTableEntry(table_name='MyIngress.next_hop_ip_table',
                                              match_fields={'hdr.ip.dstAddr': [str(ip), prefixlen]},
                                              action_name='MyIngress.set_next_hop',
-                                             action_params={'next_hop_ip': root})
+                                             action_params={'next_hop_ip': self.ip_for_neighbors[root]})
                     self.next_hop_for_subnet[subnet] = root
 
     def update_root_and_dist(self):
@@ -172,9 +173,10 @@ class PWOSPF:
                     self.root[r] = root
                     self.dist[r] = dist + 1
 
-    def update_adj(self, router, port, send):
+    def update_adj(self, router, port, srcIP, send):
         if (router not in self.port_for_router):
             self.port_for_router[router] = port
+            self.ip_for_neighbors[router] = srcIP
             self.broadcast_link_state(send)
         self.update_root_and_dist()
         self.update_forward_map()
@@ -289,7 +291,7 @@ class RouterController(Thread):
             port = pkt[CPUMetadata].srcPort
             if (self.pwospf.in_subnet(port, pkt[IP].src) and
                 str(self.pwospf[port]['subnet'].netmask) == pkt[OSPFHello].mask):
-                self.pwospf.update_adj(pkt[OSPF].routerID, port, self.send)
+                self.pwospf.update_adj(pkt[OSPF].routerID, port, pkt[IP].src, self.send)
                 self.monitor[pkt[OSPF].routerID] = (port, 0, pkt[OSPFHello].helloint * 3)
             else:
                 # print("OSPF subnet mismatch, ignored")
